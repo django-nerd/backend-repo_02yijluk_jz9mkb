@@ -9,11 +9,15 @@ from typing import Optional, List, Literal
 from pydantic import BaseModel, Field, EmailStr
 from datetime import datetime
 
+# Roles:
+# reseller < admin < investor < engineer < high_admin < owner
+Role = Literal['buyer','reseller','admin','investor','engineer','high_admin','owner']
+
 class User(BaseModel):
     name: str = Field(..., description="Full name")
     email: EmailStr = Field(..., description="Email address")
     password: str = Field(..., description="Hashed password or demo secret")
-    role: Literal['buyer','reseller','admin','owner'] = Field('buyer', description="Role for RBAC")
+    role: Role = Field('buyer', description="Role for RBAC")
     is_active: bool = Field(True)
 
 class Product(BaseModel):
@@ -49,13 +53,18 @@ class Payment(BaseModel):
 class Withdrawal(BaseModel):
     actor_email: EmailStr
     amount: float
-    status: Literal['requested','approved','rejected','paid'] = 'requested'
+    role: Role = 'buyer'
+    status: Literal['requested','approved','rejected','paid','scheduled'] = 'requested'
     note: Optional[str] = None
+    scheduled_date: Optional[datetime] = None
 
 class Log(BaseModel):
     timestamp: datetime
-    category: Literal['order','payment','auth','withdrawal','system']
+    category: Literal['order','payment','auth','withdrawal','system','sale']
     actor: Optional[str] = None
     description: str
     related_id: Optional[str] = None
 
+class Setting(BaseModel):
+    key: str
+    value: str  # store as string for simplicity (e.g., "true"/"false")

@@ -1,13 +1,13 @@
 import os
 from datetime import datetime, timedelta
 from typing import List, Optional
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from random import randint, random
 
 from database import db, create_document, get_documents
-from schemas import User, Product, Order, OrderItem, Payment, Log
+from schemas import User, Product, Order, OrderItem, Payment, Log, Withdrawal, Setting
 
 app = FastAPI(title="Digital Services Platform API")
 
@@ -27,7 +27,7 @@ def read_root():
 def read_schema():
     return {
         "collections": [
-            "user", "product", "order", "payment", "withdrawal", "log"
+            "user", "product", "order", "payment", "withdrawal", "log", "setting"
         ]
     }
 
@@ -35,6 +35,15 @@ def read_schema():
 class AuthPayload(BaseModel):
     email: str
     password: str
+
+ROLE_PREFIX = {
+    'owner': 'owner',
+    'high': 'high_admin',
+    'admin': 'admin',
+    'investor': 'investor',
+    'engineer': 'engineer',
+    'reseller': 'reseller',
+}
 
 @app.post("/api/register")
 def register(payload: AuthPayload):
@@ -49,13 +58,57 @@ def register(payload: AuthPayload):
 def login(payload: AuthPayload):
     role = 'buyer'
     email = payload.email.lower()
-    if email.startswith('admin'):
-        role = 'admin'
-    elif email.startswith('owner'):
-        role = 'owner'
-    elif email.startswith('reseller'):
-        role = 'reseller'
+    for key, r in ROLE_PREFIX.items():
+        if email.startswith(key):
+            role = r
+            break
     return {"ok": True, "role": role, "token": "demo-token"}
+
+@app.get("/api/me")
+def me(email: Optional[str] = Query(None)):
+    # Demo role resolution from email prefix
+    role = 'buyer'
+    if email:
+        em = email.lower()
+        for key, r in ROLE_PREFIX.items():
+            if em.startswith(key):
+                role = r
+                break
+    return {"ok": True, "role": role}
+
+# ---------- Settings (Auto Payment) ----------
+
+def get_setting(key: str, default: str = "false") -> str:
+    try:
+        docs = get_documents('setting', {"key": key}, limit=1)
+        if docs:
+            return docs[0].get('value', default)
+    except Exception:
+        pass
+    return default
+
+def set_setting(key: str, value: str) -> None:
+    if db is None:
+        return
+    existing = list(db['setting'].find({"key": key}).limit(1))
+    payload = {"key": key, "value": value, "updated_at": datetime.utcnow()}
+    if existing:
+        db['setting'].update_one({"_id": existing[0]['_id']}, {"$set": payload})
+    else:
+        db['setting'].insert_one({**payload, "created_at": datetime.utcnow()})
+
+@app.get("/api/settings/auto-payment")
+def get_auto_payment():
+    value = get_setting('auto_payment_enabled', 'true')
+    return {"ok": True, "enabled": value.lower() == 'true'}
+
+class TogglePayload(BaseModel):
+    enabled: bool
+
+@app.post("/api/settings/auto-payment")
+def toggle_auto_payment(body: TogglePayload):
+    set_setting('auto_payment_enabled', 'true' if body.enabled else 'false')
+    return {"ok": True, "enabled": body.enabled}
 
 # ---------- Products ----------
 
@@ -83,13 +136,11 @@ def list_products():
     seed_products_if_empty()
     try:
         docs = get_documents('product', {})
-        # Convert ObjectId to str if present
         for d in docs:
             if '_id' in d:
                 d['_id'] = str(d['_id'])
         return {"ok": True, "items": docs}
     except Exception:
-        # Fallback mock
         return {"ok": True, "items": [
             {"sku":"VPS-1","title":"VPS Nano","description":"1 vCPU • 1GB RAM • 20GB SSD","price":3.99,"category":"vps","stock":200},
             {"sku":"VPS-2","title":"VPS Micro","description":"2 vCPU • 2GB RAM • 40GB SSD","price":6.99,"category":"vps","stock":150},
@@ -107,14 +158,13 @@ def metrics():
             {"label":"MRR / Revenue","value": round(random()*15000,2), "trend": round((random()-0.5)*10,2)},
             {"label":"Saldo Tersedia","value": round(random()*5000,2), "trend": round((random()-0.5)*10,2)},
             {"label":"Ticket Open","value": randint(2, 37), "trend": round((random()-0.5)*10,2)},
-            {"label":"Auto Payment","value": ["On","Off"][randint(0,1)], "trend": 0},
+            {"label":"Auto Payment","value": "On" if get_setting('auto_payment_enabled','true')=='true' else "Off", "trend": 0},
             {"label":"Konversi","value": f"{round(random()*5+1,2)}%", "trend": round((random()-0.5)*10,2)},
         ]
     }
 
 @app.get("/api/sales")
 def sales():
-    # 30-day time series
     base = datetime.utcnow()
     series = []
     for i in range(30):
@@ -167,6 +217,17 @@ def checkout(payload: CheckoutPayload):
             payment_method=payload.payment_method or 'manual'
         )
         order_id = create_document('order', order)
+        # log sale
+        try:
+            create_document('log', Log(
+                timestamp=datetime.utcnow(),
+                category='sale',
+                actor=order.user_email,
+                description=f"{order.user_email} membeli layanan total ${order.total}",
+                related_id=str(order_id)
+            ))
+        except Exception:
+            pass
         return {"ok": True, "order_id": order_id, "client_secret": f"demo_{order_id}"}
     except Exception:
         return {"ok": True, "order_id": "demo123", "client_secret": "demo_demo123"}
@@ -178,20 +239,89 @@ class PaymentPayload(BaseModel):
 @app.post("/api/payment")
 def pay(payload: PaymentPayload):
     # In real impl, verify and update DB
+    try:
+        create_document('log', Log(
+            timestamp=datetime.utcnow(),
+            category='payment',
+            actor='system',
+            description=f"Payment captured for order {payload.order_id} via {payload.method}",
+            related_id=payload.order_id
+        ))
+    except Exception:
+        pass
     return {"ok": True, "status": "success", "order_id": payload.order_id}
+
+# ---------- Withdrawals ----------
+class WithdrawRequest(BaseModel):
+    actor_email: str
+    amount: float
+    role: str
+
+@app.post('/api/withdrawals')
+def create_withdrawal(req: WithdrawRequest):
+    role = req.role
+    now = datetime.utcnow()
+    status = 'requested'
+    note = None
+    scheduled_date = None
+
+    if role == 'reseller':
+        # T+5 days schedule
+        scheduled_date = now + timedelta(days=5)
+        status = 'scheduled'
+        note = 'Reseller T+5 payout scheduled'
+    elif role == 'high_admin':
+        status = 'paid'
+        note = 'High admin instant payout'
+    else:
+        status = 'approved'
+        note = 'Approved by policy'
+
+    try:
+        wid = create_document('withdrawal', Withdrawal(
+            actor_email=req.actor_email,
+            amount=req.amount,
+            role=role,
+            status=status,
+            note=note,
+            scheduled_date=scheduled_date
+        ))
+        # log entry
+        try:
+            desc = f"{req.actor_email} request withdraw ${req.amount:0.2f} -> {status}"
+            create_document('log', Log(
+                timestamp=now,
+                category='withdrawal',
+                actor=req.actor_email,
+                description=desc,
+                related_id=str(wid)
+            ))
+        except Exception:
+            pass
+        return {"ok": True, "id": wid, "status": status, "scheduled_date": scheduled_date}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 # ---------- Logs ----------
 @app.get("/api/logs")
 def logs():
     now = datetime.utcnow()
-    cats = ['order','payment','auth','withdrawal','system']
+    sample_names = ["Muhammad Ilham", "Aulia", "Rizky", "Siti", "Budi", "Andi"]
+    products = [
+        ("VPS Nano", "1 vCPU • 1GB RAM • 20GB SSD", 3.99),
+        ("VPS Micro", "2 vCPU • 2GB RAM • 40GB SSD", 6.99),
+        ("Game Panel", "Pterodactyl slot", 2.49),
+        ("Domain .com", "Registrasi 1 tahun", 9.49)
+    ]
     rows = []
     for i in range(25):
+        name, (pname, spec, price) = sample_names[i % len(sample_names)], products[i % len(products)]
+        desc = f"{name} menjual {pname} ({spec}) seharga ${price:.2f}"
         rows.append({
             "timestamp": (now - timedelta(minutes=i*7)).isoformat() + 'Z',
-            "category": cats[i % len(cats)],
+            "category": ['sale','payment','auth','withdrawal','system'][i % 5],
             "actor": ["system","admin@site.com","reseller@site.com","user@site.com"][i % 4],
-            "description": f"Event {i} processed",
+            "description": desc,
             "related_id": f"RID{i:04d}"
         })
     return {"ok": True, "items": rows}
