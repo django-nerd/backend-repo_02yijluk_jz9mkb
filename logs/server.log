@@ -1,27 +1,7 @@
 INFO:     Will watch for changes in these directories: ['/home/workspace']
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process [528] using StatReload
-INFO:     Started server process [530]
+INFO:     Started reloader process [575] using StatReload
+INFO:     Started server process [577]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     172.20.0.1:54952 - "HEAD / HTTP/1.1" 405 Method Not Allowed
-INFO:     172.20.0.1:35478 - "GET /api/metrics HTTP/1.1" 200 OK
-INFO:     172.20.0.1:35488 - "GET /api/settings/auto-payment HTTP/1.1" 200 OK
-INFO:     172.20.0.1:35478 - "GET /api/metrics HTTP/1.1" 200 OK
-INFO:     172.20.0.1:35478 - "GET /api/settings/auto-payment HTTP/1.1" 200 OK
-INFO:     172.20.0.1:35488 - "GET /api/sales HTTP/1.1" 200 OK
-INFO:     172.20.0.1:35478 - "GET /api/sales HTTP/1.1" 200 OK
-INFO:     172.20.0.1:40154 - "OPTIONS /api/orders/preview HTTP/1.1" 200 OK
-INFO:     172.20.0.1:40140 - "GET /api/products HTTP/1.1" 200 OK
-INFO:     172.20.0.1:40164 - "OPTIONS /api/orders/preview HTTP/1.1" 200 OK
-INFO:     172.20.0.1:40140 - "POST /api/orders/preview HTTP/1.1" 200 OK
-INFO:     172.20.0.1:40140 - "POST /api/orders/preview HTTP/1.1" 200 OK
-INFO:     172.20.0.1:40164 - "GET /api/products HTTP/1.1" 200 OK
-INFO:     172.20.0.1:40178 - "GET /api/metrics HTTP/1.1" 200 OK
-INFO:     172.20.0.1:40192 - "GET /api/settings/auto-payment HTTP/1.1" 200 OK
-INFO:     172.20.0.1:40178 - "GET /api/sales HTTP/1.1" 200 OK
-INFO:     172.20.0.1:40164 - "GET /api/metrics HTTP/1.1" 200 OK
-INFO:     172.20.0.1:40140 - "GET /api/settings/auto-payment HTTP/1.1" 200 OK
-INFO:     172.20.0.1:40164 - "GET /api/sales HTTP/1.1" 200 OK
-INFO:     172.20.0.1:40140 - "GET /api/logs HTTP/1.1" 200 OK
-INFO:     172.20.0.1:40164 - "GET /api/logs HTTP/1.1" 200 OK
+INFO:     172.20.0.1:42934 - "HEAD / HTTP/1.1" 405 Method Not Allowed
