@@ -1,21 +1,11 @@
 INFO:     Will watch for changes in these directories: ['/home/workspace']
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process [712] using StatReload
-INFO:     Started server process [714]
+INFO:     Started reloader process [758] using StatReload
+INFO:     Started server process [760]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     172.20.0.1:51350 - "HEAD / HTTP/1.1" 405 Method Not Allowed
-INFO:     172.20.0.1:49340 - "GET /api/metrics HTTP/1.1" 200 OK
-INFO:     172.20.0.1:49340 - "GET /api/metrics HTTP/1.1" 200 OK
-INFO:     172.20.0.1:49340 - "GET /api/sales HTTP/1.1" 200 OK
-INFO:     172.20.0.1:49354 - "GET /api/sales HTTP/1.1" 200 OK
-INFO:     172.20.0.1:49370 - "GET /api/metrics HTTP/1.1" 200 OK
-INFO:     172.20.0.1:49370 - "GET /api/metrics HTTP/1.1" 200 OK
-INFO:     172.20.0.1:49370 - "GET /api/sales HTTP/1.1" 200 OK
-INFO:     172.20.0.1:54840 - "GET /api/sales HTTP/1.1" 200 OK
-INFO:     172.20.0.1:47408 - "GET /api/logs HTTP/1.1" 200 OK
-INFO:     172.20.0.1:47404 - "GET /api/settings/auto-payment HTTP/1.1" 200 OK
-INFO:     172.20.0.1:47408 - "GET /api/logs HTTP/1.1" 200 OK
-INFO:     172.20.0.1:47408 - "OPTIONS /api/settings/auto-payment HTTP/1.1" 200 OK
-INFO:     172.20.0.1:47408 - "POST /api/settings/auto-payment HTTP/1.1" 200 OK
-INFO:     172.20.0.1:47408 - "POST /api/settings/auto-payment HTTP/1.1" 200 OK
+INFO:     172.20.0.1:36520 - "HEAD / HTTP/1.1" 405 Method Not Allowed
+INFO:     172.20.0.1:36528 - "POST /api/orders/preview HTTP/1.1" 200 OK
+INFO:     172.20.0.1:36552 - "POST /api/orders/preview HTTP/1.1" 200 OK
+INFO:     172.20.0.1:36536 - "GET /api/products HTTP/1.1" 200 OK
+INFO:     172.20.0.1:36552 - "GET /api/products HTTP/1.1" 200 OK
